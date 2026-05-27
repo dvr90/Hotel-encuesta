@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Panel de administración</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --gold: #C9A84C;
+      --gold-light: #E8D5A3;
+      --dark: #1A1A18;
+      --cream: #F7F3EC;
+      --text: #2C2B28;
+      --muted: #8A8780;
+      --border: #DDD8CF;
+      --white: #FFFFFF;
+      --bg2: #F0EBE1;
+    }
+    body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--text); min-height: 100vh; }
+
+    /* ── LOGIN ── */
+    #login-screen {
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      background: var(--dark);
+    }
+    .login-box {
+      width: 100%; max-width: 360px; padding: 2.5rem 2rem; text-align: center;
+    }
+    .login-box .eyebrow {
+      font-size: 10px; letter-spacing: 4px; text-transform: uppercase;
+      color: var(--gold); margin-bottom: 1rem;
+    }
+    .login-box h1 {
+      font-family: 'Cormorant Garamond', serif; font-size: 2rem;
+      font-weight: 500; color: var(--white); margin-bottom: 2rem; line-height: 1.3;
+    }
+    .login-box input[type=password] {
+      width: 100%; padding: 0.85rem 1rem; background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(201,168,76,0.3); border-radius: 2px;
+      color: var(--white); font-family: 'DM Sans', sans-serif; font-size: 15px;
+      outline: none; text-align: center; letter-spacing: 4px; margin-bottom: 1rem;
+      transition: border-color 0.2s;
+    }
+    .login-box input[type=password]:focus { border-color: var(--gold); }
+    .login-box input[type=password]::placeholder { letter-spacing: 1px; color: #706D67; }
+    .login-btn {
+      width: 100%; padding: 0.85rem; background: var(--gold); color: var(--dark);
+      border: none; border-radius: 2px; font-family: 'DM Sans', sans-serif;
+      font-size: 12px; letter-spacing: 2px; text-transform: uppercase;
+      cursor: pointer; font-weight: 500; transition: opacity 0.2s;
+    }
+    .login-btn:hover { opacity: 0.88; }
+    .login-error {
+      margin-top: 0.75rem; font-size: 13px; color: #E07070; display: none;
+    }
+
+    /* ── DASHBOARD ── */
+    #dashboard { display: none; }
+
+    .topbar {
+      background: var(--dark); padding: 1rem 2rem;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .topbar-left .eyebrow { font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: var(--gold); }
+    .topbar-left h2 { font-family: 'Cormorant Garamond', serif; font-size: 1.4rem; font-weight: 500; color: var(--white); }
+    .topbar-right { display: flex; align-items: center; gap: 1rem; }
+    .logout-btn {
+      font-size: 11px; letter-spacing: 1px; text-transform: uppercase;
+      color: var(--muted); background: none; border: none; cursor: pointer;
+      transition: color 0.2s;
+    }
+    .logout-btn:hover { color: var(--gold); }
+
+    /* Filter bar */
+    .filterbar {
+      background: var(--white); border-bottom: 1px solid var(--border);
+      padding: 0.75rem 2rem; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+    }
+    .filterbar label { font-size: 12px; color: var(--muted); letter-spacing: 0.5px; }
+    .filterbar select {
+      padding: 0.4rem 0.75rem; border: 1px solid var(--border); border-radius: 2px;
+      font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--text);
+      background: var(--white); cursor: pointer; outline: none;
+    }
+    .filterbar select:focus { border-color: var(--gold); }
+    .filter-count {
+      margin-left: auto; font-size: 12px; color: var(--muted);
+    }
+    .filter-count span { color: var(--gold); font-weight: 500; }
+
+    /* Main content */
+    .content { padding: 2rem; max-width: 1200px; margin: 0 auto; }
+
+    /* ── KPI CARDS ── */
+    .kpi-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 1rem; margin-bottom: 2rem;
+    }
+    .kpi-card {
+      background: var(--white); border: 1px solid var(--border);
+      border-radius: 2px; padding: 1.25rem 1.5rem;
+    }
+    .kpi-label { font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 0.5rem; }
+    .kpi-value { font-family: 'Cormorant Garamond', serif; font-size: 2.2rem; font-weight: 500; color: var(--text); line-height: 1; }
+    .kpi-sub { font-size: 12px; color: var(--muted); margin-top: 0.3rem; }
+    .kpi-card.accent { background: var(--dark); border-color: var(--dark); }
+    .kpi-card.accent .kpi-label { color: #706D67; }
+    .kpi-card.accent .kpi-value { color: var(--gold); }
+    .kpi-card.accent .kpi-sub { color: #706D67; }
+
+    /* ── CHARTS GRID ── */
+    .charts-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 1rem; margin-bottom: 2rem;
+    }
+    @media (max-width: 800px) { .charts-grid { grid-template-columns: 1fr; } }
+
+    .chart-card {
+      background: var(--white); border: 1px solid var(--border);
+      border-radius: 2px; padding: 1.5rem;
+    }
+    .chart-card.wide { grid-column: 1 / -1; }
+    .chart-title {
+      font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+      color: var(--gold); margin-bottom: 1.25rem;
+    }
+    .chart-wrap { position: relative; height: 240px; }
+    .chart-wrap-tall { position: relative; height: 300px; }
+
+    /* ── ASPECT BARS (Q5) ── */
+    .aspect-list { display: flex; flex-direction: column; gap: 0.75rem; }
+    .aspect-item {}
+    .aspect-header { display: flex; justify-content: space-between; margin-bottom: 0.3rem; }
+    .aspect-name-lbl { font-size: 13px; color: var(--text); }
+    .aspect-score { font-size: 13px; font-weight: 500; color: var(--gold); }
+    .aspect-bar-bg { height: 6px; background: var(--bg2); border-radius: 3px; overflow: hidden; }
+    .aspect-bar-fill { height: 100%; background: var(--gold); border-radius: 3px; transition: width 0.6s ease; }
+
+    /* ── TABLE ── */
+    .table-card {
+      background: var(--white); border: 1px solid var(--border);
+      border-radius: 2px; margin-bottom: 2rem; overflow: hidden;
+    }
+    .table-header {
+      padding: 1rem 1.5rem; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .table-title { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--gold); }
+    .export-btn {
+      font-size: 11px; letter-spacing: 1px; text-transform: uppercase;
+      color: var(--muted); background: none; border: 1px solid var(--border);
+      padding: 0.4rem 0.75rem; border-radius: 2px; cursor: pointer;
+      transition: all 0.2s; font-family: 'DM Sans', sans-serif;
+    }
+    .export-btn:hover { border-color: var(--gold); color: var(--gold); }
+    .table-scroll { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 900px; }
+    thead th {
+      padding: 0.75rem 1rem; background: var(--bg2);
+      text-align: left; font-size: 11px; letter-spacing: 0.5px;
+      color: var(--muted); font-weight: 400; border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    tbody td {
+      padding: 0.75rem 1rem; border-bottom: 1px solid var(--border);
+      color: var(--text); vertical-align: top; max-width: 180px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover td { background: #FDFAF4; }
+    .score-pill {
+      display: inline-block; padding: 2px 8px; border-radius: 2px;
+      font-size: 12px; font-weight: 500;
+    }
+    .score-high { background: #EAF3DE; color: #3B6D11; }
+    .score-mid  { background: #FAEEDA; color: #854F0B; }
+    .score-low  { background: #FCEBEB; color: #A32D2D; }
+
+    /* Loading */
+    .loading {
+      text-align: center; padding: 4rem 2rem;
+      font-size: 13px; color: var(--muted); letter-spacing: 1px;
+    }
+    .loading .spinner {
+      width: 28px; height: 28px; border: 2px solid var(--border);
+      border-top-color: var(--gold); border-radius: 50%;
+      animation: spin 0.8s linear infinite; margin: 0 auto 1rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* No data */
+    .no-data { text-align: center; padding: 3rem; color: var(--muted); font-size: 14px; }
+  </style>
+</head>
+<body>
+
+<!-- ── LOGIN ── -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="eyebrow">Panel de administración</div>
+    <h1>Acceso restringido</h1>
+    <input type="password" id="pwd-input" placeholder="Contraseña" onkeydown="if(event.key==='Enter')doLogin()"/>
+    <button class="login-btn" onclick="doLogin()">Entrar</button>
+    <div class="login-error" id="login-error">Contraseña incorrecta</div>
+  </div>
+</div>
+
+<!-- ── DASHBOARD ── -->
+<div id="dashboard">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="eyebrow">Hotel · Encuesta de satisfacción</div>
+      <h2>Panel de resultados</h2>
+    </div>
+    <div class="topbar-right">
+      <button class="logout-btn" onclick="doLogout()">Cerrar sesión</button>
+    </div>
+  </div>
+
+  <div class="filterbar">
+    <label>Período</label>
+    <select id="filter-period" onchange="applyFilter()">
+      <option value="all">Todos los datos</option>
+      <option value="week">Última semana</option>
+      <option value="month" selected>Último mes</option>
+      <option value="3month">Últimos 3 meses</option>
+      <option value="year">Último año</option>
+    </select>
+    <div class="filter-count">Mostrando <span id="resp-count">—</span> respuestas</div>
+  </div>
+
+  <div class="content">
+    <div id="loading-state" class="loading">
+      <div class="spinner"></div>
+      Cargando respuestas…
+    </div>
+
+    <div id="data-content" style="display:none;">
+
+      <!-- KPIs -->
+      <div class="kpi-grid" id="kpi-grid"></div>
+
+      <!-- Charts row 1 -->
+      <div class="charts-grid">
+        <div class="chart-card">
+          <div class="chart-title">Lo mejor de la estancia (P1)</div>
+          <div class="chart-wrap"><canvas id="chart-q1"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">¿Recomendaría el hotel? (P4)</div>
+          <div class="chart-wrap"><canvas id="chart-q4"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Check-in y check-out (P6)</div>
+          <div class="chart-wrap"><canvas id="chart-q6"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Percepción de precio (P8)</div>
+          <div class="chart-wrap"><canvas id="chart-q8"></canvas></div>
+        </div>
+
+        <!-- Q5 aspects -->
+        <div class="chart-card">
+          <div class="chart-title">Valoración por aspectos — media (P5)</div>
+          <div id="aspect-bars" class="aspect-list"></div>
+        </div>
+
+        <!-- Q9 services -->
+        <div class="chart-card">
+          <div class="chart-title">Servicios deseados (P9)</div>
+          <div class="chart-wrap"><canvas id="chart-q9"></canvas></div>
+        </div>
+
+        <!-- Q10 channels wide -->
+        <div class="chart-card wide">
+          <div class="chart-title">Canal de reserva habitual (P10)</div>
+          <div class="chart-wrap"><canvas id="chart-q10"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="table-card">
+        <div class="table-header">
+          <div class="table-title">Todas las respuestas</div>
+          <button class="export-btn" onclick="exportCSV()">Exportar CSV</button>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Lo mejor (P1)</th>
+                <th>Volvería (P3)</th>
+                <th>Recomendaría (P4)</th>
+                <th>Check-in (P6)</th>
+                <th>Precio (P8)</th>
+                <th>Lo mejoraría (P2)</th>
+                <th>Personal (P7)</th>
+                <th>Servicios (P9)</th>
+                <th>Canal (P10)</th>
+              </tr>
+            </thead>
+            <tbody id="resp-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div><!-- /data-content -->
+
+    <div id="no-data" class="no-data" style="display:none;">
+      No hay respuestas en el período seleccionado.
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getFirestore, collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDCFt10jS329A6C0nwvPxAn5XeoQwthuII",
+    authDomain: "encuesta-pasarela.firebaseapp.com",
+    projectId: "encuesta-pasarela",
+    storageBucket: "encuesta-pasarela.firebasestorage.app",
+    messagingSenderId: "61133086745",
+    appId: "1:61133086745:web:841745a84ee59776574a88"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  window._loadData = async function() {
+    const q = query(collection(db, 'respuestas'), orderBy('fecha', 'desc'));
+    const snap = await getDocs(q);
+    const rows = [];
+    snap.forEach(doc => {
+      const d = doc.data();
+      rows.push({ id: doc.id, ...d, _ts: d.fecha?.toDate ? d.fecha.toDate() : new Date() });
+    });
+    return rows;
+  };
+</script>
+
+<script>
+  // ── CONFIG ──
+  const PASSWORD = 'hotel2024';   // <-- CAMBIA ESTA CONTRASEÑA
+
+  // ── AUTH ──
+  function doLogin() {
+    const val = document.getElementById('pwd-input').value;
+    if (val === PASSWORD) {
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('dashboard').style.display = 'block';
+      loadAndRender();
+    } else {
+      document.getElementById('login-error').style.display = 'block';
+      document.getElementById('pwd-input').value = '';
+    }
+  }
+  function doLogout() {
+    document.getElementById('dashboard').style.display = 'none';
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('pwd-input').value = '';
+  }
+
+  // ── DATA ──
+  let allData = [];
+  let charts = {};
+
+  async function loadAndRender() {
+    try {
+      allData = await window._loadData();
+      applyFilter();
+    } catch(e) {
+      document.getElementById('loading-state').innerHTML = '<div style="color:#E07070;text-align:center;padding:3rem;">Error cargando datos. Comprueba la conexión.</div>';
+      console.error(e);
+    }
+  }
+
+  function applyFilter() {
+    const period = document.getElementById('filter-period').value;
+    const now = new Date();
+    let filtered = allData;
+
+    if (period === 'week') {
+      const cut = new Date(now - 7*24*60*60*1000);
+      filtered = allData.filter(r => r._ts >= cut);
+    } else if (period === 'month') {
+      const cut = new Date(now - 30*24*60*60*1000);
+      filtered = allData.filter(r => r._ts >= cut);
+    } else if (period === '3month') {
+      const cut = new Date(now - 90*24*60*60*1000);
+      filtered = allData.filter(r => r._ts >= cut);
+    } else if (period === 'year') {
+      const cut = new Date(now - 365*24*60*60*1000);
+      filtered = allData.filter(r => r._ts >= cut);
+    }
+
+    document.getElementById('loading-state').style.display = 'none';
+    document.getElementById('resp-count').textContent = filtered.length;
+
+    if (filtered.length === 0) {
+      document.getElementById('data-content').style.display = 'none';
+      document.getElementById('no-data').style.display = 'block';
+      return;
+    }
+
+    document.getElementById('no-data').style.display = 'none';
+    document.getElementById('data-content').style.display = 'block';
+    renderAll(filtered);
+  }
+
+  // ── COLORS ──
+  const GOLD = '#C9A84C';
+  const DARK = '#1A1A18';
+  const PALETTE = ['#C9A84C','#E8D5A3','#A08030','#F0E8C8','#7A6020','#D4BC80','#5A4010'];
+
+  function chartColors(n) {
+    return Array.from({length: n}, (_, i) => PALETTE[i % PALETTE.length]);
+  }
+
+  // ── RENDER ALL ──
+  function renderAll(data) {
+    destroyCharts();
+    renderKPIs(data);
+    renderPieChart('chart-q1', data, 'q1');
+    renderPieChart('chart-q4', data, 'q4');
+    renderPieChart('chart-q6', data, 'q6');
+    renderPieChart('chart-q8', data, 'q8');
+    renderAspectBars(data);
+    renderMultiBar('chart-q9', data, 'q9');
+    renderMultiBar('chart-q10', data, 'q10');
+    renderTable(data);
+  }
+
+  function destroyCharts() {
+    Object.values(charts).forEach(c => c.destroy());
+    charts = {};
+  }
+
+  // ── KPIs ──
+  function renderKPIs(data) {
+    const n = data.length;
+    const avgReturn = avg(data, r => r.q3);
+    const pctRecommend = pct(data, r => r.q4 && r.q4.startsWith('Sí'));
+    const avgAspects = avgQ5(data);
+
+    document.getElementById('kpi-grid').innerHTML = `
+      <div class="kpi-card accent">
+        <div class="kpi-label">Respuestas</div>
+        <div class="kpi-value">${n}</div>
+        <div class="kpi-sub">en el período</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Probabilidad de volver</div>
+        <div class="kpi-value">${avgReturn > 0 ? avgReturn.toFixed(1) : '—'}<span style="font-size:1rem;color:var(--muted)"> /10</span></div>
+        <div class="kpi-sub">media P3</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Recomendarían</div>
+        <div class="kpi-value">${pctRecommend > 0 ? pctRecommend + '%' : '—'}</div>
+        <div class="kpi-sub">de los clientes</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Valoración media</div>
+        <div class="kpi-value">${avgAspects > 0 ? avgAspects.toFixed(1) : '—'}<span style="font-size:1rem;color:var(--muted)"> /5</span></div>
+        <div class="kpi-sub">aspectos del servicio</div>
+      </div>
+    `;
+  }
+
+  function avg(data, fn) {
+    const vals = data.map(fn).filter(v => v != null && !isNaN(v));
+    return vals.length ? vals.reduce((a,b) => a+b, 0) / vals.length : 0;
+  }
+  function pct(data, fn) {
+    if (!data.length) return 0;
+    return Math.round(data.filter(fn).length / data.length * 100);
+  }
+  function avgQ5(data) {
+    const scores = [];
+    data.forEach(r => {
+      if (r.q5 && typeof r.q5 === 'object') {
+        Object.values(r.q5).forEach(v => { if (v) scores.push(v); });
+      }
+    });
+    return scores.length ? scores.reduce((a,b)=>a+b,0)/scores.length : 0;
+  }
+
+  // ── PIE / DOUGHNUT CHART ──
+  function renderPieChart(canvasId, data, field) {
+    const counts = {};
+    data.forEach(r => {
+      const val = r[field];
+      if (val) counts[val] = (counts[val] || 0) + 1;
+    });
+    const labels = Object.keys(counts);
+    const values = Object.values(counts);
+    if (!labels.length) return;
+
+    const ctx = document.getElementById(canvasId).getContext('2d');
+    charts[canvasId] = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels,
+        datasets: [{ data: values, backgroundColor: chartColors(labels.length), borderWidth: 0 }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'right',
+            labels: { font: { family: 'DM Sans', size: 11 }, color: '#8A8780', boxWidth: 12, padding: 10 }
+          },
+          tooltip: {
+            callbacks: {
+              label: ctx => ` ${ctx.label}: ${ctx.raw} (${Math.round(ctx.raw/values.reduce((a,b)=>a+b,0)*100)}%)`
+            }
+          }
+        },
+        cutout: '55%'
+      }
+    });
+  }
+
+  // ── MULTI-VALUE BAR (Q9, Q10) ──
+  function renderMultiBar(canvasId, data, field) {
+    const counts = {};
+    data.forEach(r => {
+      const arr = r[field];
+      if (Array.isArray(arr)) {
+        arr.forEach(v => { if (v && v !== '(ninguno seleccionado)') counts[v] = (counts[v]||0)+1; });
+      }
+    });
+    const sorted = Object.entries(counts).sort((a,b) => b[1]-a[1]);
+    const labels = sorted.map(e => e[0]);
+    const values = sorted.map(e => e[1]);
+    if (!labels.length) return;
+
+    const ctx = document.getElementById(canvasId).getContext('2d');
+    charts[canvasId] = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          data: values,
+          backgroundColor: GOLD,
+          borderRadius: 2,
+          barThickness: 28
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        indexAxis: 'y',
+        plugins: { legend: { display: false } },
+        scales: {
+          x: {
+            grid: { color: '#F0EBE1' },
+            ticks: { font: { family:'DM Sans', size:11 }, color:'#8A8780', stepSize: 1 }
+          },
+          y: {
+            grid: { display: false },
+            ticks: { font: { family:'DM Sans', size:12 }, color:'#2C2B28' }
+          }
+        }
+      }
+    });
+  }
+
+  // ── ASPECT BARS ──
+  function renderAspectBars(data) {
+    const aspectos = ['Limpieza','Atención del personal','Comodidad de la habitación','Wifi','Desayuno / restaurante','Relación calidad-precio'];
+    const container = document.getElementById('aspect-bars');
+    container.innerHTML = '';
+
+    aspectos.forEach(asp => {
+      const vals = data.map(r => r.q5?.[asp]).filter(v => v != null && !isNaN(v));
+      const mean = vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : 0;
+      const pctWidth = (mean/5)*100;
+      const div = document.createElement('div');
+      div.className = 'aspect-item';
+      div.innerHTML = `
+        <div class="aspect-header">
+          <span class="aspect-name-lbl">${asp}</span>
+          <span class="aspect-score">${mean > 0 ? mean.toFixed(1) : '—'} / 5</span>
+        </div>
+        <div class="aspect-bar-bg">
+          <div class="aspect-bar-fill" style="width:${pctWidth}%"></div>
+        </div>`;
+      container.appendChild(div);
+    });
+  }
+
+  // ── TABLE ──
+  function renderTable(data) {
+    const tbody = document.getElementById('resp-table-body');
+    tbody.innerHTML = '';
+    data.forEach(r => {
+      const score = r.q3 || '—';
+      const pillClass = score >= 8 ? 'score-high' : score >= 5 ? 'score-mid' : 'score-low';
+      const fecha = r._ts ? r._ts.toLocaleDateString('es-ES') : '—';
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${fecha}</td>
+        <td title="${r.q1||''}">${r.q1 || '—'}</td>
+        <td><span class="score-pill ${pillClass}">${score}/10</span></td>
+        <td title="${r.q4||''}">${r.q4 || '—'}</td>
+        <td title="${r.q6||''}">${r.q6 || '—'}</td>
+        <td title="${r.q8||''}">${r.q8 || '—'}</td>
+        <td title="${r.q2||''}">${r.q2 ? r.q2.substring(0,50)+(r.q2.length>50?'…':'') : '—'}</td>
+        <td title="${r.q7||''}">${r.q7 || '—'}</td>
+        <td title="${Array.isArray(r.q9)?r.q9.join(', '):''}">${Array.isArray(r.q9) ? r.q9.join(', ').substring(0,50) : '—'}</td>
+        <td title="${Array.isArray(r.q10)?r.q10.join(', '):''}">${Array.isArray(r.q10) ? r.q10.join(', ').substring(0,50) : '—'}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  // ── EXPORT CSV ──
+  window.exportCSV = function() {
+    const period = document.getElementById('filter-period').value;
+    const now = new Date();
+    let filtered = allData;
+    if (period === 'week') filtered = allData.filter(r => r._ts >= new Date(now-7*24*60*60*1000));
+    else if (period === 'month') filtered = allData.filter(r => r._ts >= new Date(now-30*24*60*60*1000));
+    else if (period === '3month') filtered = allData.filter(r => r._ts >= new Date(now-90*24*60*60*1000));
+    else if (period === 'year') filtered = allData.filter(r => r._ts >= new Date(now-365*24*60*60*1000));
+
+    const headers = ['Fecha','Lo mejor (P1)','Lo peor (P2)','Volvería 1-10 (P3)','Recomendaría (P4)','Por qué (P4)','Limpieza (P5)','Atención personal (P5)','Comodidad hab. (P5)','Wifi (P5)','Desayuno (P5)','Cal-precio (P5)','Check-in (P6)','Personal destaca (P7)','Nombre personal (P7)','Precio adecuado (P8)','Servicios deseados (P9)','Canal reserva (P10)'];
+    const rows = filtered.map(r => [
+      r._ts ? r._ts.toLocaleDateString('es-ES') : '',
+      r.q1||'', r.q2||'', r.q3||'', r.q4||'', r.q4_why||'',
+      r.q5?.['Limpieza']||'', r.q5?.['Atención del personal']||'',
+      r.q5?.['Comodidad de la habitación']||'', r.q5?.['Wifi']||'',
+      r.q5?.['Desayuno / restaurante']||'', r.q5?.['Relación calidad-precio']||'',
+      r.q6||'', r.q7||'', r.q7_name||'', r.q8||'',
+      Array.isArray(r.q9)?r.q9.join(' | '):'',
+      Array.isArray(r.q10)?r.q10.join(' | '):''
+    ].map(v => `"${String(v).replace(/"/g,'""')}"`));
+
+    const csv = [headers.map(h=>`"${h}"`).join(','), ...rows.map(r=>r.join(','))].join('\n');
+    const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = `encuesta_hotel_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+  };
+
+  window.applyFilter = applyFilter;
+  window.doLogin = doLogin;
+  window.doLogout = doLogout;
+</script>
+</body>
+</html>
